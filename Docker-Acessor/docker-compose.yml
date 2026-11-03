@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Container principal do Agente Acessor - Monitoramento WhatsApp Pessoal
+  acessor-whatsapp-personal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acessor-whatsapp-personal
+    ports:
+      - "8000:8000"           # Porta API Flask para webhook do WhatsApp
+      - "5432:5432"          # Porta PostgreSQL (opcional, se usar persistência externa)
+    environment:
+      - PYTHONUNBUFFERED=1
+      - WHAATSAAP_ADMIN_NUMBER="5512988974666"
+      - WHATSAPP_WEBHOOK_URL="https://gateway.example.com/acesso/webhook"
+      - GROUPS_TO_MONITOR="/workspace/data/groups.json"
+      - SEARCH_INDEX_PATH="/workspace/data/search_index.db"
+      - MEMORY_PATH="/workspace/MEMORY.md"
+      - LOG_LEVEL="INFO"
+    volumes:
+      # Mount workspace local para persistência de dados
+      - /C:/Users/TopLoyd/.openclaw/workspace/PROJETOS/Acessor:/workspace/data
+      # Volume para cache de busca rápida
+      - acessor-search-cache:/var/cache/search
+      # Volume para logs
+      - acessor-logs:/var/log/acesso
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'         # 1 CPU dedicada
+          memory: 2G           # 2GB RAM
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  acessor-search-cache:
+    driver: local
+  acessor-logs:
+    driver: local
+
+# Network para comunicação com WhatsApp Cloud API (se necessário)
+networks:
+  acessor-net:
+    driver: bridge
